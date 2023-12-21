@@ -6,18 +6,17 @@ import re
 from datetime import datetime
 import environ
 import django
-
 from users.models import User
 from asgiref.sync import sync_to_async
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ConversationHandler, CallbackContext, MessageHandler, \
     filters
+
 environ.Env.read_env(env_file='.env')
 
 env = environ.Env()
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
-
 
 TELEGRAM_TOKEN = env("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = env("TELEGRAM_CHAT_ID")
@@ -31,12 +30,20 @@ user_ids = set()
 user_data = {}
 BROADCAST_MESSAGE = range(1)
 
+
 def get_language_keyboard():
-    keyboard = [['Русский', 'Română']]
+    keyboard = [['Русский', 'Română'], ['Fa rezervare']]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+
+
+def get_start_keyboard():
+    keyboard = [['Fa rezervare']]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
 
 async def start(update: Update, context: CallbackContext) -> int:
+    # Сброс или инициализация данных пользователя
+    context.user_data.clear()
     user, created = await sync_to_async(User.objects.get_or_create)(chat_id=str(update.effective_chat.id))
     user.full_name = f"{update.effective_user.first_name} {update.effective_user.last_name or ''}"
     await sync_to_async(user.save)()
@@ -46,11 +53,29 @@ async def start(update: Update, context: CallbackContext) -> int:
     return LANGUAGE
 
 
+async def handle_reservation_button(update: Update, context: CallbackContext) -> int:
+    chat_id = str(update.effective_chat.id)
+
+    # Clear all user data for the specific chat
+    if chat_id in user_data:
+        user_data.pop(chat_id, None)
+
+    return await start(update, context)
+
+
 async def language_choice(update: Update, context: CallbackContext) -> int:
-    context.user_data['language'] = update.message.text
-    await update.message.reply_text(
-        'Как вас зовут?' if context.user_data['language'] == 'Русский' else 'Cum vă numiți?')
+    text = update.message.text
+    # Clear user data to start fresh
+    context.user_data.clear()
+    context.user_data['language'] = text
+    reply_markup = get_start_keyboard()
+    if context.user_data['language'] == 'Русский':
+        await update.message.reply_text('Как вас зовут?', reply_markup=reply_markup)
+    else:
+        await update.message.reply_text('Cum vă numiți?', reply_markup=reply_markup)
     return NAME
+
+
 async def broadcast_command(update: Update, context: CallbackContext) -> int:
     # Check if the user is authorized
     if str(update.effective_chat.id) == AUTHORIZED_CHAT_ID:
@@ -59,6 +84,8 @@ async def broadcast_command(update: Update, context: CallbackContext) -> int:
     else:
         await update.message.reply_text("You are not authorized to use this command.")
         return ConversationHandler.END
+
+
 async def broadcast_message(update: Update, context: CallbackContext) -> int:
     broadcast_text = update.message.text
     users = await sync_to_async(list)(User.objects.values_list('chat_id', flat=True))
@@ -69,15 +96,21 @@ async def broadcast_message(update: Update, context: CallbackContext) -> int:
             logger.error(f"Failed to send message to {chat_id}: {e}")
     await update.message.reply_text("Broadcast completed.")
     return ConversationHandler.END
+
+
 async def name(update: Update, context: CallbackContext) -> int:
     user_name = update.message.text
     context.user_data["name"] = user_name
     user = await sync_to_async(User.objects.get)(chat_id=str(update.effective_chat.id))
     user.full_name = user_name
     await sync_to_async(user.save)()
+    reply_markup = get_start_keyboard()
     await update.message.reply_text("Какой у вас номер телефона?" if context.user_data.get('language',
-                                                                                           'Русский') == 'Русский' else "Care este numărul dvs de telefon?")
+                                                                                           'Русский') == 'Русский' else "Care este numărul dvs de telefon?",
+                                    reply_markup=reply_markup)
     return PHONE
+
+
 async def list_command(update: Update, context: CallbackContext) -> None:
     if str(update.effective_chat.id) == AUTHORIZED_CHAT_ID:
         users = await sync_to_async(list)(User.objects.values_list('chat_id', 'full_name', 'phone', 'is_subscribed'))
@@ -86,6 +119,7 @@ async def list_command(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(message)
     else:
         await update.message.reply_text("You are not authorized to use this command.")
+
 
 async def phone(update: Update, context: CallbackContext) -> int:
     user_phone = update.message.text
@@ -138,15 +172,16 @@ async def cancel(update, context):
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 
-    # Existing conversation handler for the start command
+    # Existing conversation handler for the /start command
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[CommandHandler("start", start), CommandHandler("farezervare", handle_reservation_button)],
         states={
+
+            NAME: [MessageHandler(filters.TEXT & ~filters.Regex("^Fa rezervare$"), name)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.Regex("^Fa rezervare$"), phone)],
+            DATE: [MessageHandler(filters.TEXT & ~filters.Regex("^Fa rezervare$"), date)],
+            NUMBER_OF_PEOPLE: [MessageHandler(filters.TEXT & ~filters.Regex("^Fa rezervare$"), number_of_people)],
             LANGUAGE: [MessageHandler(filters.Regex('^(Русский|Română)$'), language_choice)],
-            NAME: [MessageHandler(filters.TEXT, name)],
-            PHONE: [MessageHandler(filters.TEXT, phone)],
-            DATE: [MessageHandler(filters.TEXT, date)],
-            NUMBER_OF_PEOPLE: [MessageHandler(filters.TEXT, number_of_people)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
@@ -163,12 +198,17 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel)],
     )
 
-    # Adding handlers to the application
+    # Add the new reservation handler
+    reservation_handler = MessageHandler(filters.Regex("^Fa rezervare$"), handle_reservation_button)
+
+    # Add all the handlers to the application
     app.add_handler(conv_handler)
     app.add_handler(list_handler)
     app.add_handler(broadcast_handler)
+    app.add_handler(reservation_handler)
 
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()

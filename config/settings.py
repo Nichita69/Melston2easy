@@ -132,7 +132,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
-    'DATETIME_FORMAT': "%Y-%m-%dT%H:%M:%SZ",
+    'DATETIME_FORMAT': "%Y-%m-%dT%H:%M:%SZ ",
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
@@ -154,7 +154,9 @@ EMAIL_HOST_USER = 'mersbmw3443@gmail.com'
 EMAIL_HOST_PASSWORD = '3977niku'
 
 TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-
+ADMIN_CSS = {
+    'all': ('path/to/custom-admin-styles.css',),
+}
 NOSE_ARGS = [
     '--with-coverage',
     '--cover-erase',
