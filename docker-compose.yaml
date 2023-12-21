@@ -21,8 +21,6 @@ services:
       - /pythonNikitka/__pycache__
     env_file:
       - .env
-    command:
-      - python manage.py migrate
-      - python manage.py bot  # Здесь задайте нужную команду для запуска бота
+    command: python manage.py bot  # Здесь задайте нужную команду для запуска бота
     depends_on:
       - db
