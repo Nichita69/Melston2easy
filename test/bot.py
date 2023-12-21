@@ -12,16 +12,13 @@ from asgiref.sync import sync_to_async
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ConversationHandler, CallbackContext, MessageHandler, \
     filters
-environ.Env.read_env(env_file='.env')
-
-env = environ.Env()
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 
-TELEGRAM_TOKEN = env("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = env("TELEGRAM_CHAT_ID")
-AUTHORIZED_CHAT_ID = env("AUTHORIZED_CHAT_ID")
+TELEGRAM_TOKEN = ('6975502522:AAEyevdFTbct4-Ya4J2iP6xQXKhT7Mnek_Q')
+TELEGRAM_CHAT_ID = ('4016136242')
+AUTHORIZED_CHAT_ID = ('621545666')
 LANGUAGE, NAME, PHONE, DATE, NUMBER_OF_PEOPLE, BROADCAST_TEXT = range(6)
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
