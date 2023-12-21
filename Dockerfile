@@ -6,11 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE 1
 # Set environment variables to prevent Python from buffering stdout and stderr
 ENV PYTHONUNBUFFERED 1
 
-# Your Telegram bot credentials (WARNING: This is not a secure practice for production!)
-ENV TELEGRAM_TOKEN="6975502522:AAEyevdFTbct4-Ya4J2iP6xQXKhT7Mnek_Q"
-ENV TELEGRAM_CHAT_ID="-4016136242"
-ENV AUTHORIZED_CHAT_ID="621545666"
-
 # Set work directory
 WORKDIR /pythonNikitka
 

@@ -16,10 +16,8 @@ services:
     volumes:
       - .:/pythonNikitka
       - /pythonNikitka/__pycache__
-    environment:
-      - TELEGRAM_TOKEN=6975502522:AAEyevdFTbct4-Ya4J2iP6xQXKhT7Mnek_Q
-      - TELEGRAM_CHAT_ID=-4016136242
-      - AUTHORIZED_CHAT_ID=621545666
+    env_file:
+      - .env
     command: python manage.py bot
     depends_on:
       - db
