@@ -1,22 +1,17 @@
 import logging
-import os
 from datetime import datetime
-import logging
-import re
-from datetime import datetime
+
 import environ
-import django
-from users.models import User
 from asgiref.sync import sync_to_async
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ConversationHandler, CallbackContext, MessageHandler, \
     filters
 
+from users.models import User
+
 environ.Env.read_env(env_file='.env')
 
 env = environ.Env()
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-django.setup()
 
 TELEGRAM_TOKEN = env("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = env("TELEGRAM_CHAT_ID")
