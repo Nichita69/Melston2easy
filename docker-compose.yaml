@@ -6,7 +6,6 @@ services:
     volumes:
       - ./data/db:/var/lib/postgresql/data
       - ./scripts/install-extensions.sql:/docker-entrypoint-initdb.d/install-extensions.sql
-
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
@@ -14,4 +13,11 @@ services:
 
   app:
     build: .
-
+    volumes:
+      - .:/pythonNikitka
+      - /pythonNikitka/__pycache__
+    environment:
+      - .env
+    command: python manage.py bot
+    depends_on:
+      - db
