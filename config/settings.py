@@ -37,12 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'drf_yasg',
+    'users',
     'django_nose',
     'rest_framework_simplejwt',
     'rest_framework.authtoken',
 
-    'users',
-    'task',
 ]
 
 MIDDLEWARE = [
@@ -80,14 +79,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'PORT': 5432,
-        'USER': 'postgres',
-        'PASSWORD': "457849da"
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'db.sqlite3'
     }
 }
-
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 

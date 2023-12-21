@@ -1,36 +1,25 @@
-version: '3.9'
+version: "3"
+
 services:
   db:
-    image: postgres:latest
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD= 457849da
-    ports:
-      - "5432:5432"
+    image: postgres
     volumes:
-      - db:/var/lib/postgresql/data
-  pghero:
-    image: ankane/pghero
-    container_name: pghero
-    network_mode: host
-    ports:
-      - 8080:8080
+      - ./data/db:/var/lib/postgresql/data
+      - ./scripts/install-extensions.sql:/docker-entrypoint-initdb.d/install-extensions.sql
+
     environment:
-      DATABASE_URL: postgres://user:password@hostaddress:5432
-  redis:
-    image: "redis:alpine"
-    hostname: redis
-    ports:
-      - "6379:6379"
-  api:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  web:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
     ports:
       - "8000:8000"
     depends_on:
       - db
-      - redis
-volumes:
-  db:
-    driver: local
+    links:
+      - db
