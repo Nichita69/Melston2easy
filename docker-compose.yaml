@@ -17,7 +17,8 @@ services:
       - .:/pythonNikitka
       - /pythonNikitka/__pycache__
     environment:
-      - TELEGRAM_TOKEN=6975502522:AAEyevdFTbct4-Ya4J2iP6xQXKhT7Mnek_Q
+      - TELEGRAM_TOKEN=
+        6345593543:AAGur9qqX3CsEZAG7qOurL_gn3qZWIYwfY4
       - TELEGRAM_CHAT_ID=-4016136242
       - AUTHORIZED_CHAT_ID=621545666
     command: python manage.py bot
