@@ -1,7 +1,7 @@
 FROM ubuntu:latest
 
 # Pull official base image
-FROM python:3.12-slim-bullseye
+FROM python:3.9.18-slim-bullseye
 
 RUN apt-get  update && \
     apt-get install -y  curl libpq-dev gcc python3-cffi  && \
