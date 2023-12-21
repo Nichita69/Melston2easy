@@ -1,21 +1,27 @@
 import logging
 import os
 from datetime import datetime
-
+import logging
+import re
+from datetime import datetime
+import environ
 import django
+
+from users.models import User
 from asgiref.sync import sync_to_async
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ConversationHandler, CallbackContext, MessageHandler, \
     filters
+environ.Env.read_env(env_file='.env')
 
+env = environ.Env()
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from users.models import User
 
-TELEGRAM_TOKEN = "6679083154:AAEUXQWGVHtszmBD8xa6_Y98q6gSF864Lls"
-TELEGRAM_CHAT_ID = "-4062756263"
-AUTHORIZED_CHAT_ID = "409107123"
+TELEGRAM_TOKEN = env("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = env("TELEGRAM_CHAT_ID")
+AUTHORIZED_CHAT_ID = env("AUTHORIZED_CHAT_ID")
 LANGUAGE, NAME, PHONE, DATE, NUMBER_OF_PEOPLE, BROADCAST_TEXT = range(6)
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -23,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 user_ids = set()
 user_data = {}
-
+BROADCAST_MESSAGE = range(1)
 
 def get_language_keyboard():
     keyboard = [['Русский', 'Română']]
@@ -45,8 +51,24 @@ async def language_choice(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text(
         'Как вас зовут?' if context.user_data['language'] == 'Русский' else 'Cum vă numiți?')
     return NAME
-
-
+async def broadcast_command(update: Update, context: CallbackContext) -> int:
+    # Check if the user is authorized
+    if str(update.effective_chat.id) == AUTHORIZED_CHAT_ID:
+        await update.message.reply_text("Please enter the message to broadcast:")
+        return BROADCAST_MESSAGE
+    else:
+        await update.message.reply_text("You are not authorized to use this command.")
+        return ConversationHandler.END
+async def broadcast_message(update: Update, context: CallbackContext) -> int:
+    broadcast_text = update.message.text
+    users = await sync_to_async(list)(User.objects.values_list('chat_id', flat=True))
+    for chat_id in users:
+        try:
+            await context.bot.send_message(chat_id=chat_id, text=broadcast_text)
+        except Exception as e:
+            logger.error(f"Failed to send message to {chat_id}: {e}")
+    await update.message.reply_text("Broadcast completed.")
+    return ConversationHandler.END
 async def name(update: Update, context: CallbackContext) -> int:
     user_name = update.message.text
     context.user_data["name"] = user_name
@@ -56,7 +78,14 @@ async def name(update: Update, context: CallbackContext) -> int:
     await update.message.reply_text("Какой у вас номер телефона?" if context.user_data.get('language',
                                                                                            'Русский') == 'Русский' else "Care este numărul dvs de telefon?")
     return PHONE
-
+async def list_command(update: Update, context: CallbackContext) -> None:
+    if str(update.effective_chat.id) == AUTHORIZED_CHAT_ID:
+        users = await sync_to_async(list)(User.objects.values_list('chat_id', 'full_name', 'phone', 'is_subscribed'))
+        message = '\n'.join([f"Chat ID: {chat_id}, Name: {name}, Phone: {phone}, Subscribed: {is_subscribed}"
+                             for chat_id, name, phone, is_subscribed in users])
+        await update.message.reply_text(message)
+    else:
+        await update.message.reply_text("You are not authorized to use this command.")
 
 async def phone(update: Update, context: CallbackContext) -> int:
     user_phone = update.message.text
@@ -108,6 +137,8 @@ async def cancel(update, context):
 
 def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+    # Existing conversation handler for the start command
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -119,5 +150,25 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+
+    # Handler for the /list command
+    list_handler = CommandHandler("list", list_command)
+
+    # Conversation handler for the /broadcast command
+    broadcast_handler = ConversationHandler(
+        entry_points=[CommandHandler('broadcast', broadcast_command)],
+        states={
+            BROADCAST_MESSAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, broadcast_message)]
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+
+    # Adding handlers to the application
     app.add_handler(conv_handler)
+    app.add_handler(list_handler)
+    app.add_handler(broadcast_handler)
+
     app.run_polling()
+
+if __name__ == "__main__":
+    main()
