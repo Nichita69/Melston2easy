@@ -15,6 +15,7 @@ services:
 
   app:
     build: .
+    container_name: bot
     volumes:
       - .:/pythonNikitka
       - /pythonNikitka/__pycache__
