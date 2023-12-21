@@ -12,6 +12,6 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
 
-  web:
+  app:
     build: .
-    command: python manage.py bot
+
