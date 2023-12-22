@@ -1,24 +1,15 @@
-version: "3"
+version: "3.8"
 
 services:
-  db:
+  app:  # This service is for the Django application
     build: .
-    container_name: app_container_name
+    container_name: django_container
     volumes:
-      - .:/app
-      - sqlite_data:/app/db.sqlite3
-    command: python manage.py runserver 0.0.0.0:8000
+      - .:/app  # Mounts the project directory to /app in the container
+      - sqlite_data:/app/db.sqlite3  # Mounts the named volume to where the SQLite database is expected
+    command: python manage.py bot  # Runs your bot command
     ports:
-      - "8000:8000"
+      - "8000:8000"  # Expose ports if needed (e.g., for web interface)
 
-  app:
-    build: .
-    container_name: bot
-    volumes:
-      - .:/pythonNikitka
-      - /pythonNikitka/__pycache__
-    env_file:
-      - .env
-    command: python manage.py bot  # Здесь задайте нужную команду для запуска бота
-    depends_on:
-      - db
+volumes:
+  sqlite_data:  # Declares the named volume for SQLite
