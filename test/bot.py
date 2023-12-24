@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-
+from telegram import ReplyKeyboardRemove
 import environ
 from asgiref.sync import sync_to_async
 from telegram import ReplyKeyboardMarkup, Update
@@ -37,8 +37,7 @@ def get_start_keyboard():
 
 
 async def start(update: Update, context: CallbackContext) -> int:
-    # Сброс или инициализация данных пользователя
-    context.user_data.clear()
+
     user, created = await sync_to_async(User.objects.get_or_create)(chat_id=str(update.effective_chat.id))
     user.full_name = f"{update.effective_user.first_name} {update.effective_user.last_name or ''}"
     await sync_to_async(user.save)()
@@ -48,14 +47,18 @@ async def start(update: Update, context: CallbackContext) -> int:
     return LANGUAGE
 
 
+
 async def handle_reservation_button(update: Update, context: CallbackContext) -> int:
-    chat_id = str(update.effective_chat.id)
+    # Очищаем данные пользователя
+    context.user_data.clear()
 
-    # Clear all user data for the specific chat
-    if chat_id in user_data:
-        user_data.pop(chat_id, None)
+    # Удаляем клавиатуру после отправки кнопки
+    await update.message.reply_text("",
+                                    reply_markup=ReplyKeyboardRemove())
 
-    return await start(update, context)
+    # Начинаем новую конверсацию с пользователем и сразу задаем вопрос о имени
+    return await name(update, context)
+
 
 
 async def language_choice(update: Update, context: CallbackContext) -> int:
