@@ -182,14 +182,3 @@ NOSE_ARGS = [
     '--cover-package=' + ','.join(
         [app + '.views' for app in ['task', 'users']])
 ]
-
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379',
-        'TIMEOUT': 60,
-        'OPTIONS': {
-            'MAX_ENTRIES': 10
-        }
-    }
-}
