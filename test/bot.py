@@ -48,18 +48,14 @@ async def start(update: Update, context: CallbackContext) -> int:
 
 
 
-async def handle_reservation_button(update: Update, context: CallbackContext) -> int:
-    # Очищаем данные пользователя
+async def farezervare_command(update: Update, context: CallbackContext) -> int:
+    # Clear user data to start fresh
     context.user_data.clear()
 
-    # Удаляем клавиатуру после отправки кнопки
-    await update.message.reply_text("",
-                                    reply_markup=ReplyKeyboardRemove())
-
-    # Начинаем новую конверсацию с пользователем и сразу задаем вопрос о имени
-    return await name(update, context)
-
-
+    # Move to the NAME state directly
+    reply_markup = get_start_keyboard()
+    await update.message.reply_text('Как вас зовут?', reply_markup=reply_markup)
+    return NAME
 
 async def language_choice(update: Update, context: CallbackContext) -> int:
     text = update.message.text
@@ -172,16 +168,21 @@ def main():
 
     # Existing conversation handler for the /start command
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start), CommandHandler("farezervare", handle_reservation_button)],
+        entry_points=[
+            CommandHandler("start", start),
+            CommandHandler("farezervare", farezervare_command)
+        ],
         states={
-
+            LANGUAGE: [MessageHandler(filters.Regex('^(Русский|Română)$'), language_choice)],
             NAME: [MessageHandler(filters.TEXT & ~filters.Regex("^Fa rezervare$"), name)],
             PHONE: [MessageHandler(filters.TEXT & ~filters.Regex("^Fa rezervare$"), phone)],
             DATE: [MessageHandler(filters.TEXT & ~filters.Regex("^Fa rezervare$"), date)],
             NUMBER_OF_PEOPLE: [MessageHandler(filters.TEXT & ~filters.Regex("^Fa rezervare$"), number_of_people)],
-            LANGUAGE: [MessageHandler(filters.Regex('^(Русский|Română)$'), language_choice)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[
+            CommandHandler("cancel", cancel),
+            MessageHandler(filters.Regex("^Fa rezervare$"), farezervare_command)
+        ],
     )
 
     # Handler for the /list command
@@ -193,17 +194,13 @@ def main():
         states={
             BROADCAST_MESSAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, broadcast_message)]
         },
-        fallbacks=[CommandHandler('cancel', cancel)],
+        fallbacks=[CommandHandler('cancel', cancel),],
     )
 
-    # Add the new reservation handler
-    reservation_handler = MessageHandler(filters.Regex("^Fa rezervare$"), handle_reservation_button)
-
-    # Add all the handlers to the application
     app.add_handler(conv_handler)
     app.add_handler(list_handler)
     app.add_handler(broadcast_handler)
-    app.add_handler(reservation_handler)
+
 
     app.run_polling()
 
